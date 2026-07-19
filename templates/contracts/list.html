@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Contracts{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Contracts</h1>
+        <div class="page-header-sub">{{ contracts|length }} contract{{ contracts|length|pluralize }}</div>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'contracts:upload' %}" class="btn btn-secondary">
+            <i class="bi bi-upload"></i> Upload
+        </a>
+        <a href="{% url 'contracts:create' %}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> New Contract
+        </a>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="card" style="margin-bottom:20px">
+    <div class="card-body" style="padding:14px 20px">
+        <form method="get" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+                <input type="text" name="q" value="{{ search_form.q.value|default:'' }}" class="form-control" placeholder="Search contracts...">
+            </div>
+            {{ search_form.status }}
+            {{ search_form.category }}
+            {{ search_form.priority }}
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body-flush">
+        {% if contracts %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Number</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Category</th>
+                        <th>Expiry</th>
+                        <th>Value</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contract in contracts %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'contracts:detail' pk=contract.pk %}" style="font-weight:600">
+                                {{ contract.title }}
+                            </a>
+                            {% if contract.is_confidential %}
+                            <i class="bi bi-lock-fill" style="color:var(--warning);font-size:11px;margin-left:4px"></i>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ contract.contract_number|default:"--" }}</code></td>
+                        <td>{{ contract.status|status_badge }}</td>
+                        <td>{{ contract.priority|priority_badge }}</td>
+                        <td style="color:var(--text-secondary)">{{ contract.category|default:"--" }}</td>
+                        <td style="color:var(--text-secondary)">
+                            {{ contract.expiry_date|default:"--" }}
+                            {% if contract.is_expiring_soon %}
+                            <i class="bi bi-exclamation-triangle" style="color:var(--warning);font-size:11px;margin-left:3px"></i>
+                            {% endif %}
+                        </td>
+                        <td style="font-weight:500">{% if contract.total_value %}{{ contract.total_value|currency }}{% else %}<span style="color:var(--text-tertiary)">--</span>{% endif %}</td>
+                        <td>
+                            <a href="{% url 'contracts:detail' pk=contract.pk %}" class="btn btn-sm btn-ghost">
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
+            <div class="empty-state-text">No contracts found</div>
+            <a href="{% url 'contracts:create' %}" class="btn btn-primary btn-sm">Create your first contract</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

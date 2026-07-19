@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Approval Detail{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'approvals:list' %}">Approvals</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>{{ approval.contract.title }}</li>
+        </ul>
+        <h1 style="font-size:20px">{{ approval.contract.title }}</h1>
+    </div>
+    <div class="page-actions">{{ approval.status|status_badge }}</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:20px">
+    <div>
+        <!-- Progress -->
+        <div class="card" style="margin-bottom:20px">
+            <div class="card-header"><h5>Approval Progress</h5></div>
+            <div class="card-body">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+                    <div class="progress" style="flex:1">
+                        <div class="progress-bar progress-bar-success" style="width:{{ approval.progress_percentage }}%"></div>
+                    </div>
+                    <span style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap">{{ approval.progress_percentage }}%</span>
+                </div>
+
+                {% if steps %}
+                <div class="timeline">
+                    {% for step in steps %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot {% if approval.current_step and approval.current_step.id == step.id %}timeline-dot-warning{% elif step.step_number < approval.current_step.step_number|default:0 %}timeline-dot-success{% endif %}"></div>
+                        <div>
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <div>
+                                    <span style="font-weight:600;font-size:13.5px">{{ step.name }}</span>
+                                    <span style="font-size:12px;color:var(--text-tertiary);margin-left:6px">{{ step.approver.get_full_name|default:step.approver.username }}</span>
+                                </div>
+                                <div>
+                                    {% if approval.current_step and approval.current_step.id == step.id %}
+                                    <span class="badge badge-pending">Current</span>
+                                    {% elif step.step_number < approval.current_step.step_number|default:0 %}
+                                    <span class="badge badge-completed"><i class="bi bi-check"></i> Done</span>
+                                    {% else %}
+                                    <span class="badge badge-draft">Waiting</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if step.role_required %}
+                            <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">Role: {{ step.role_required }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state"><div class="empty-state-text">No steps defined</div></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Form -->
+        {% if is_current_approver %}
+        <div class="card" style="margin-bottom:20px;border-color:var(--warning)">
+            <div class="card-header" style="background:var(--warning-light)">
+                <h5 style="color:#92400e"><i class="bi bi-bell"></i> Your Action Required</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'approvals:process' pk=approval.pk %}">
+                    {% csrf_token %}
+                    <div style="margin-bottom:16px">
+                        <div class="form-label">Decision</div>
+                        <div style="display:flex;gap:16px">
+                            <label class="form-check" style="cursor:pointer">
+                                <input class="form-check-input" type="radio" name="action" value="approve" required>
+                                <span class="form-check-label" style="color:var(--success);font-weight:600">Approve</span>
+                            </label>
+                            <label class="form-check" style="cursor:pointer">
+                                <input class="form-check-input" type="radio" name="action" value="reject">
+                                <span class="form-check-label" style="color:var(--danger);font-weight:600">Reject</span>
+                            </label>
+                            <label class="form-check" style="cursor:pointer">
+                                <input class="form-check-input" type="radio" name="action" value="request_changes">
+                                <span class="form-check-label" style="color:var(--warning);font-weight:600">Request Changes</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:16px">
+                        <div class="form-label">Comment</div>
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Optional comment..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Submit</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Action Log -->
+        <div class="card">
+            <div class="card-header"><h5>History</h5></div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for log in action_logs %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot {% if log.action == 'approve' %}timeline-dot-success{% elif log.action == 'reject' %}timeline-dot-danger{% elif log.action == 'request_changes' %}timeline-dot-warning{% else %}timeline-dot-info{% endif %}"></div>
+                        <div>
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <span style="font-weight:500;font-size:13px">{{ log.actor.get_full_name|default:log.actor.username }}</span>
+                                <span style="font-size:11px;color:var(--text-tertiary)">{{ log.created_at|date:"M d, Y H:i" }}</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-top:1px">
+                                {{ log.get_action_display }}
+                                {% if log.step %} &middot; Step {{ log.step.step_number }}{% endif %}
+                            </div>
+                            {% if log.comment %}
+                            <div style="font-size:13px;color:var(--text-secondary);margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:var(--radius-sm)">{{ log.comment }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state" style="padding:24px"><div class="empty-state-text">No actions yet</div></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+        <div class="card">
+            <div class="card-header"><h5>Details</h5></div>
+            <div class="card-body" style="font-size:13px">
+                <div style="margin-bottom:12px"><div class="meta-item-label">Contract</div><div><a href="{% url 'contracts:detail' pk=approval.contract.pk %}" style="font-weight:500">{{ approval.contract.title }}</a></div></div>
+                <div style="margin-bottom:12px"><div class="meta-item-label">Chain</div><div style="font-weight:500">{{ approval.chain|default:"Manual" }}</div></div>
+                <div style="margin-bottom:12px"><div class="meta-item-label">Requested By</div><div style="font-weight:500">{{ approval.requested_by.get_full_name|default:approval.requested_by.username }}</div></div>
+                <div style="margin-bottom:12px"><div class="meta-item-label">Created</div><div style="font-weight:500">{{ approval.created_at|date:"M d, Y H:i" }}</div></div>
+                {% if approval.completed_at %}
+                <div style="margin-bottom:12px"><div class="meta-item-label">Completed</div><div style="font-weight:500">{{ approval.completed_at|date:"M d, Y H:i" }}</div></div>
+                {% endif %}
+                {% if approval.notes %}
+                <div style="padding-top:12px;border-top:1px solid var(--border-light)">
+                    <div class="meta-item-label">Notes</div>
+                    <div style="color:var(--text-secondary);margin-top:4px">{{ approval.notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

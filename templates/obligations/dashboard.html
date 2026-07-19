@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Obligations & Renewals{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Obligations & Renewals</h1>
+        <div class="page-header-sub">Track deadlines, renewals, and compliance</div>
+    </div>
+</div>
+
+<!-- Alerts -->
+{% if alerts %}
+<div style="margin-bottom:20px">
+    <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Active Alerts</div>
+    {% for alert in alerts %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px;background:var(--warning-light)">
+        <div style="font-size:13px">
+            <span style="font-weight:600">{{ alert.get_alert_type_display }}</span>
+            <span style="margin-left:8px;color:var(--text-secondary)">{{ alert.contract.title }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge {% if alert.days_until_event < 0 %}badge-critical{% elif alert.days_until_event < 7 %}badge-medium{% else %}badge-info{% endif %}">
+                {% if alert.days_until_event < 0 %}{{ alert.days_until_event|cut:"-" }}d overdue{% else %}{{ alert.days_until_event }}d{% endif %}
+            </span>
+            <form method="post" action="{% url 'obligations:dismiss_alert' pk=alert.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-ghost" style="padding:2px 6px"><i class="bi bi-x"></i></button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Overdue -->
+{% if overdue_obligations %}
+<div style="margin-bottom:20px">
+    <div style="font-size:12px;font-weight:600;color:var(--danger);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px"><i class="bi bi-exclamation-circle"></i> Overdue</div>
+    {% for obligation in overdue_obligations %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border:1px solid #fecaca;border-left:3px solid var(--danger);border-radius:var(--radius);margin-bottom:6px;background:var(--danger-light)">
+        <div style="font-size:13px">
+            <div style="font-weight:500">{{ obligation.title }}</div>
+            <div style="font-size:12px;color:var(--text-tertiary)">{{ obligation.contract.title }} &middot; {{ obligation.get_frequency_display }}</div>
+        </div>
+        <div style="text-align:right">
+            <span class="badge badge-critical">Overdue</span>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">Due: {{ obligation.due_date }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Upcoming -->
+{% if upcoming_obligations %}
+<div style="margin-bottom:20px">
+    <div style="font-size:12px;font-weight:600;color:var(--warning);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px"><i class="bi bi-clock"></i> Due in 30 days</div>
+    {% for obligation in upcoming_obligations %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border:1px solid #fde68a;border-left:3px solid var(--warning);border-radius:var(--radius);margin-bottom:6px;background:var(--warning-light)">
+        <div style="font-size:13px">
+            <div style="font-weight:500">{{ obligation.title }}</div>
+            <div style="font-size:12px;color:var(--text-tertiary)">{{ obligation.contract.title }} &middot; {{ obligation.get_frequency_display }}</div>
+        </div>
+        <div style="text-align:right">
+            <span class="badge badge-medium">{{ obligation.days_until_due }}d left</span>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">Due: {{ obligation.due_date }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Expiring Contracts -->
+<div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+        <h5>Contracts Expiring in 90 Days</h5>
+    </div>
+    <div class="card-body-flush">
+        {% if expiring_contracts %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Contract</th>
+                        <th>Expiry</th>
+                        <th>Auto-Renew</th>
+                        <th>Days Left</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contract in expiring_contracts %}
+                    <tr>
+                        <td><a href="{% url 'contracts:detail' pk=contract.pk %}" style="font-weight:500">{{ contract.title }}</a></td>
+                        <td style="color:var(--text-secondary)">{{ contract.expiry_date }}</td>
+                        <td>{% if contract.auto_renew %}<span class="badge badge-medium">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</td>
+                        <td>
+                            <span class="badge {% if contract.days_until_expiry < 30 %}badge-critical{% elif contract.days_until_expiry < 60 %}badge-medium{% else %}badge-active{% endif %}">
+                                {{ contract.days_until_expiry }}d
+                            </span>
+                        </td>
+                        <td><a href="{% url 'contracts:detail' pk=contract.pk %}" class="btn btn-sm btn-ghost"><i class="bi bi-arrow-right"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-check-circle"></i></div>
+            <div class="empty-state-text">No contracts expiring soon</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- All Obligations -->
+<div class="card">
+    <div class="card-header">
+        <h5>All Obligations</h5>
+        <a href="{% url 'obligations:list' %}" class="btn btn-sm btn-ghost">View all</a>
+    </div>
+    <div class="card-body-flush">
+        {% if all_obligations %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Contract</th>
+                        <th>Frequency</th>
+                        <th>Status</th>
+                        <th>Due</th>
+                        <th>Assigned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obligation in all_obligations %}
+                    <tr>
+                        <td style="font-weight:500">{{ obligation.title }}</td>
+                        <td><a href="{% url 'contracts:detail' pk=obligation.contract.pk %}" style="font-weight:500">{{ obligation.contract.title }}</a></td>
+                        <td style="color:var(--text-secondary)">{{ obligation.get_frequency_display }}</td>
+                        <td>{{ obligation.status|status_badge }}</td>
+                        <td style="color:var(--text-secondary)">{{ obligation.due_date|default:"--" }}</td>
+                        <td style="color:var(--text-secondary)">{{ obligation.assigned_to|default:"--" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><div class="empty-state-text">No obligations tracked</div></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Request Signature{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'contracts:detail' pk=contract.pk %}">{{ contract.title }}</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>Request Signature</li>
+        </ul>
+        <h1>Request Signature</h1>
+    </div>
+</div>
+
+<div style="max-width:520px">
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div style="margin-bottom:16px">
+                    <label class="form-label">Signer Name <span style="color:var(--danger)">*</span></label>
+                    <input type="text" name="signer_name" class="form-control" required placeholder="Full name">
+                </div>
+                <div style="margin-bottom:16px">
+                    <label class="form-label">Signer Email <span style="color:var(--danger)">*</span></label>
+                    <input type="email" name="signer_email" class="form-control" required placeholder="email@example.com">
+                </div>
+                <div style="margin-bottom:16px">
+                    <label class="form-label">Message</label>
+                    <textarea name="message" class="form-control" rows="3" placeholder="Optional message..."></textarea>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border-light)">
+                    <button type="submit" class="btn btn-success"><i class="bi bi-send"></i> Send Request</button>
+                    <a href="{% url 'contracts:detail' pk=contract.pk %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

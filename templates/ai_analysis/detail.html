@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}AI Analysis{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'contracts:detail' pk=analysis.contract.pk %}">{{ analysis.contract.title }}</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>AI Analysis</li>
+        </ul>
+        <h1>AI Contract Analysis</h1>
+    </div>
+    <div class="page-actions">{{ analysis.status|status_badge }}</div>
+</div>
+
+<!-- Stats -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border-light);border:1px solid var(--border-light);border-radius:var(--radius);overflow:hidden;margin-bottom:24px">
+    <div class="meta-item"><div class="meta-item-label">Model</div><div class="meta-item-value">{{ analysis.model_used|default:"--" }}</div></div>
+    <div class="meta-item"><div class="meta-item-label">Tokens</div><div class="meta-item-value">{{ analysis.tokens_used|default:"--" }}</div></div>
+    <div class="meta-item"><div class="meta-item-label">Time</div><div class="meta-item-value">{% if analysis.processing_time_seconds %}{{ analysis.processing_time_seconds|floatformat:1 }}s{% else %}--{% endif %}</div></div>
+    <div class="meta-item"><div class="meta-item-label">Risk Flags</div><div class="meta-item-value">{{ risk_flags|length }}</div></div>
+</div>
+
+{% if analysis.status == "failed" %}
+<div class="alert alert-danger" style="margin-bottom:20px">
+    <i class="bi bi-exclamation-circle"></i> {{ analysis.error_message }}
+</div>
+{% endif %}
+
+<!-- Metadata -->
+{% if metadata %}
+<div class="card" style="margin-bottom:20px">
+    <div class="card-header"><h5>Extracted Metadata</h5></div>
+    <div class="card-body">
+        <div class="meta-grid" style="margin-bottom:16px">
+            <div class="meta-item"><div class="meta-item-label">Effective Date</div><div class="meta-item-value">{{ metadata.effective_date|default:"--" }}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Expiry Date</div><div class="meta-item-value">{{ metadata.expiry_date|default:"--" }}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Governing Law</div><div class="meta-item-value">{{ metadata.governing_law|default:"--" }}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Jurisdiction</div><div class="meta-item-value">{{ metadata.jurisdiction|default:"--" }}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Liability Cap</div><div class="meta-item-value">{{ metadata.liability_cap|default:"--" }}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Auto-Renewal</div><div class="meta-item-value">{% if metadata.auto_renewal %}<span class="badge badge-medium">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Confidentiality</div><div class="meta-item-value">{% if metadata.confidentiality_clause %}<span class="badge badge-active">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Non-Compete</div><div class="meta-item-value">{% if metadata.non_compete_clause %}<span class="badge badge-medium">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Indemnification</div><div class="meta-item-value">{% if metadata.indemnification_clause %}<span class="badge badge-active">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</div></div>
+            <div class="meta-item"><div class="meta-item-label">Force Majeure</div><div class="meta-item-value">{% if metadata.force_majeure %}<span class="badge badge-active">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</div></div>
+        </div>
+
+        {% if metadata.payment_terms %}
+        <div style="margin-bottom:8px"><span style="font-size:12px;font-weight:600;color:var(--text-secondary)">Payment Terms:</span> <span style="font-size:13px">{{ metadata.payment_terms }}</span></div>
+        {% endif %}
+        {% if metadata.termination_clauses %}
+        <div style="margin-bottom:8px"><span style="font-size:12px;font-weight:600;color:var(--text-secondary)">Termination:</span> <span style="font-size:13px">{{ metadata.termination_clauses }}</span></div>
+        {% endif %}
+        {% if metadata.renewal_terms %}
+        <div style="margin-bottom:8px"><span style="font-size:12px;font-weight:600;color:var(--text-secondary)">Renewal:</span> <span style="font-size:13px">{{ metadata.renewal_terms }}</span></div>
+        {% endif %}
+
+        {% if metadata.extracted_text_summary %}
+        <div style="margin-top:16px;padding:14px 16px;background:var(--bg);border-radius:var(--radius);font-size:13.5px;color:var(--text-secondary);line-height:1.6">
+            {{ metadata.extracted_text_summary }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Risk Flags -->
+<div class="card">
+    <div class="card-header">
+        <h5>Risk Flags</h5>
+        <span class="badge badge-draft">{{ risk_flags|length }} found</span>
+    </div>
+    <div class="card-body">
+        {% for flag in risk_flags %}
+        <div class="risk-card" style="display:flex;gap:12px;align-items:flex-start">
+            <div class="risk-card-left" style="background:{% if flag.severity == 'critical' %}var(--danger){% elif flag.severity == 'high' %}var(--warning){% elif flag.severity == 'medium' %}#d97706{% else %}var(--success){% endif %}"></div>
+            <div style="flex:1">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <div style="display:flex;gap:6px;align-items:center">
+                        {{ flag.severity|severity_badge }}
+                        <span class="badge badge-draft">{{ flag.category }}</span>
+                        <span style="font-weight:600;font-size:13.5px">{{ flag.title }}</span>
+                    </div>
+                    {% if not flag.is_reviewed %}
+                    <span class="badge badge-critical" style="font-size:10px">Needs Review</span>
+                    {% else %}
+                    <span class="badge badge-active" style="font-size:10px">Reviewed</span>
+                    {% endif %}
+                </div>
+                <p style="font-size:13px;color:var(--text-secondary);margin:6px 0 0;line-height:1.5">{{ flag.description }}</p>
+                {% if flag.recommendation %}
+                <div style="margin-top:8px;padding:8px 12px;background:var(--accent-light);border-radius:var(--radius-sm);font-size:12px;color:var(--accent)">
+                    <i class="bi bi-lightbulb"></i> {{ flag.recommendation }}
+                </div>
+                {% endif %}
+                {% if flag.clause_reference %}
+                <div style="margin-top:8px;font-size:12px;color:var(--text-tertiary);font-style:italic;border-left:2px solid var(--border);padding-left:10px">
+                    {{ flag.clause_reference|truncatechars:300 }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-shield-check"></i></div>
+            <div class="empty-state-text">No risk flags detected</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

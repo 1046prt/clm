@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Signing Audit Log{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'contracts:detail' pk=contract.pk %}">{{ contract.title }}</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>Signing Audit Log</li>
+        </ul>
+        <h1>Signing Audit Log</h1>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="timeline">
+            {% for log in logs %}
+            <div class="timeline-item">
+                <div class="timeline-dot {% if 'completed' in log.event %}timeline-dot-success{% elif 'declined' in log.event %}timeline-dot-danger{% elif 'viewed' in log.event %}timeline-dot-info{% else %}timeline-dot-primary{% endif %}"></div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="font-weight:500;font-size:13.5px">{{ log.get_event_display }}</span>
+                        <span style="font-size:11px;color:var(--text-tertiary)">{{ log.timestamp|date:"M d, Y H:i:s" }}</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px">
+                        {% if log.actor_email %}{{ log.actor_email }}{% endif %}
+                        {% if log.ip_address %} &middot; IP: {{ log.ip_address }}{% endif %}
+                    </div>
+                    {% if log.details %}
+                    <div style="margin-top:6px"><code style="font-size:11px">{{ log.details }}</code></div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state" style="padding:24px"><div class="empty-state-text">No audit entries</div></div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

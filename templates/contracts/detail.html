@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+{% load humanize %}
+
+{% block title %}{{ contract.title }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="page-header" style="margin-bottom:20px">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'contracts:list' %}">Contracts</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>{{ contract.title }}</li>
+        </ul>
+        <h1 style="font-size:20px;display:flex;align-items:center;gap:8px">
+            {{ contract.title }}
+            {% if contract.is_confidential %}
+            <i class="bi bi-lock-fill" style="color:var(--warning);font-size:14px"></i>
+            {% endif %}
+        </h1>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'contracts:edit' pk=contract.pk %}" class="btn btn-secondary btn-sm">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        {% if contract.status == "draft" %}
+        <a href="{% url 'approvals:initiate' pk=contract.pk %}" class="btn btn-warning btn-sm">
+            <i class="bi bi-send"></i> Submit for Approval
+        </a>
+        {% endif %}
+        {% if contract.status == "active" or contract.status == "approved" %}
+        <a href="{% url 'esign:create_request' contract_pk=contract.pk %}" class="btn btn-success btn-sm">
+            <i class="bi bi-pen"></i> Request Signature
+        </a>
+        {% endif %}
+        <form method="post" action="{% url 'contracts:analyze' pk=contract.pk %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-info btn-sm">
+                <i class="bi bi-stars"></i> AI Analyze
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Meta row -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--border-light);border:1px solid var(--border-light);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
+    <div class="meta-item">
+        <div class="meta-item-label">Status</div>
+        <div class="meta-item-value">{{ contract.status|status_badge }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-item-label">Priority</div>
+        <div class="meta-item-value">{{ contract.priority|priority_badge }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-item-label">Category</div>
+        <div class="meta-item-value">{{ contract.category|default:"--" }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-item-label">Contract #</div>
+        <div class="meta-item-value"><code>{{ contract.contract_number|default:"--" }}</code></div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-item-label">Value</div>
+        <div class="meta-item-value">{{ contract.total_value|currency }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-item-label">Effective</div>
+        <div class="meta-item-value">{{ contract.effective_date|default:"--" }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-item-label">Expiry</div>
+        <div class="meta-item-value">
+            {{ contract.expiry_date|default:"--" }}
+            {% if contract.is_expiring_soon %}
+            <span class="badge badge-medium" style="margin-left:4px;font-size:10px">{{ contract.days_until_expiry }}d</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-item-label">Auto-Renew</div>
+        <div class="meta-item-value">
+            {% if contract.auto_renew %}<span class="badge badge-active">Yes ({{ contract.renewal_notice_days }}d)</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Parties -->
+{% if contract.parties.all %}
+<div class="card" style="margin-bottom:20px">
+    <div class="card-header"><h5>Parties</h5></div>
+    <div class="card-body" style="padding:14px 20px">
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+            {% for party in contract.parties.all %}
+            <div style="padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);min-width:200px">
+                <div style="font-weight:600;font-size:13.5px">{{ party.name }}</div>
+                <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px">{{ party.email }}</div>
+                {% if party.contact_person %}
+                <div style="font-size:12px;color:var(--text-tertiary)">Contact: {{ party.contact_person }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tabs -->
+<ul class="nav-tabs-custom">
+    <li><a class="tab-link active" data-bs-toggle="tab" href="#tab-content">Content</a></li>
+    <li><a class="tab-link" data-bs-toggle="tab" href="#tab-approvals">Approvals <span class="tab-count">{{ approval_requests|length }}</span></a></li>
+    <li><a class="tab-link" data-bs-toggle="tab" href="#tab-analysis">AI Analysis <span class="tab-count">{{ analysis_results|length }}</span></a></li>
+    <li><a class="tab-link" data-bs-toggle="tab" href="#tab-obligations">Obligations <span class="tab-count">{{ obligations|length }}</span></a></li>
+    <li><a class="tab-link" data-bs-toggle="tab" href="#tab-signatures">Signatures <span class="tab-count">{{ signature_requests|length }}</span></a></li>
+    <li><a class="tab-link" data-bs-toggle="tab" href="#tab-versions">Versions <span class="tab-count">{{ versions|length }}</span></a></li>
+    <li><a class="tab-link" data-bs-toggle="tab" href="#tab-comments">Comments <span class="tab-count">{{ comments|length }}</span></a></li>
+</ul>
+
+<div class="tab-content">
+    <!-- Content -->
+    <div class="tab-pane fade show active" id="tab-content">
+        <div class="card">
+            <div class="card-body">
+                {% if contract.content %}
+                <div class="contract-content" style="white-space:pre-wrap">{{ contract.content }}</div>
+                {% elif contract.description %}
+                <p>{{ contract.description }}</p>
+                {% else %}
+                <div class="empty-state"><div class="empty-state-text">No content available</div></div>
+                {% endif %}
+                {% if contract.uploaded_file %}
+                <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-light)">
+                    <a href="{{ contract.uploaded_file.url }}" class="btn btn-sm btn-outline" target="_blank">
+                        <i class="bi bi-download"></i> Download Original
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Approvals -->
+    <div class="tab-pane fade" id="tab-approvals">
+        {% if approval_requests %}
+        <div class="list-group">
+            {% for req in approval_requests %}
+            <a href="{% url 'approvals:detail' pk=req.pk %}" class="list-group-item list-group-item-action">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-weight:500;font-size:13.5px">{{ req.chain|default:"Manual Approval" }}</div>
+                        <div style="font-size:12px;color:var(--text-tertiary)">by {{ req.requested_by }} on {{ req.created_at|date:"M d, Y" }}</div>
+                    </div>
+                    {{ req.status|status_badge }}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card"><div class="empty-state">
+            <div class="empty-state-text">No approval requests</div>
+            {% if contract.status == "draft" %}
+            <a href="{% url 'approvals:initiate' pk=contract.pk %}" class="btn btn-warning btn-sm">Submit for Approval</a>
+            {% endif %}
+        </div></div>
+        {% endif %}
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="tab-pane fade" id="tab-analysis">
+        {% for result in analysis_results %}
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-header">
+                <h5>Analysis #{{ forloop.counter }}</h5>
+                <div style="display:flex;gap:12px;align-items:center">
+                    {{ result.status|status_badge }}
+                    <span style="font-size:12px;color:var(--text-tertiary)">{{ result.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+                    <div><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Model</div><div style="font-weight:500;font-size:13.5px">{{ result.model_used|default:"--" }}</div></div>
+                    <div><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Tokens</div><div style="font-weight:500;font-size:13.5px">{{ result.tokens_used|default:"--" }}</div></div>
+                    <div><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Time</div><div style="font-weight:500;font-size:13.5px">{% if result.processing_time_seconds %}{{ result.processing_time_seconds|floatformat:1 }}s{% else %}--{% endif %}</div></div>
+                </div>
+
+                {% if result.metadata %}
+                <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">Extracted Metadata</div>
+                <div class="meta-grid" style="margin-bottom:16px">
+                    <div class="meta-item"><div class="meta-item-label">Effective Date</div><div class="meta-item-value">{{ result.metadata.effective_date|default:"--" }}</div></div>
+                    <div class="meta-item"><div class="meta-item-label">Expiry Date</div><div class="meta-item-value">{{ result.metadata.expiry_date|default:"--" }}</div></div>
+                    <div class="meta-item"><div class="meta-item-label">Governing Law</div><div class="meta-item-value">{{ result.metadata.governing_law|default:"--" }}</div></div>
+                    <div class="meta-item"><div class="meta-item-label">Liability Cap</div><div class="meta-item-value">{{ result.metadata.liability_cap|default:"--" }}</div></div>
+                    <div class="meta-item"><div class="meta-item-label">Auto-Renewal</div><div class="meta-item-value">{% if result.metadata.auto_renewal %}<span class="badge badge-medium">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</div></div>
+                    <div class="meta-item"><div class="meta-item-label">Confidentiality</div><div class="meta-item-value">{% if result.metadata.confidentiality_clause %}<span class="badge badge-active">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</div></div>
+                </div>
+                {% if result.metadata.extracted_text_summary %}
+                <div style="background:var(--bg);padding:12px 16px;border-radius:var(--radius);font-size:13px;color:var(--text-secondary);line-height:1.6">
+                    {{ result.metadata.extracted_text_summary }}
+                </div>
+                {% endif %}
+                {% endif %}
+
+                {% if result.risk_flags.all %}
+                <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin:16px 0 8px">Risk Flags</div>
+                {% for flag in result.risk_flags.all %}
+                <div class="risk-card" style="display:flex;gap:12px;align-items:flex-start">
+                    <div class="risk-card-left" style="background:{% if flag.severity == 'critical' %}var(--danger){% elif flag.severity == 'high' %}var(--warning){% elif flag.severity == 'medium' %}#d97706{% else %}var(--success){% endif %}"></div>
+                    <div style="flex:1">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                            <div style="display:flex;gap:6px;align-items:center">
+                                {{ flag.severity|severity_badge }}
+                                <span style="font-weight:600;font-size:13.5px">{{ flag.title }}</span>
+                                {% if not flag.is_reviewed %}<span class="badge badge-critical" style="font-size:10px">Needs Review</span>{% endif %}
+                            </div>
+                            <span style="font-size:11px;color:var(--text-tertiary)">{{ flag.category }}</span>
+                        </div>
+                        <p style="font-size:13px;color:var(--text-secondary);margin:4px 0 0;line-height:1.5">{{ flag.description }}</p>
+                        {% if flag.recommendation %}
+                        <div style="margin-top:8px;padding:8px 12px;background:var(--accent-light);border-radius:var(--radius-sm);font-size:12px;color:var(--accent)">
+                            <i class="bi bi-lightbulb"></i> {{ flag.recommendation }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="card"><div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-stars"></i></div>
+            <div class="empty-state-text">No AI analysis yet</div>
+            <form method="post" action="{% url 'contracts:analyze' pk=contract.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-info btn-sm"><i class="bi bi-stars"></i> Run Analysis</button>
+            </form>
+        </div></div>
+        {% endfor %}
+    </div>
+
+    <!-- Obligations -->
+    <div class="tab-pane fade" id="tab-obligations">
+        {% if obligations %}
+        <div class="list-group">
+            {% for obligation in obligations %}
+            <div class="list-group-item">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-weight:500;font-size:13.5px">{{ obligation.title }}</div>
+                        <div style="font-size:12px;color:var(--text-tertiary)">{{ obligation.get_frequency_display }} &middot; Due: {{ obligation.due_date|default:"--" }}</div>
+                    </div>
+                    {{ obligation.status|status_badge }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card"><div class="empty-state"><div class="empty-state-text">No obligations tracked</div></div></div>
+        {% endif %}
+    </div>
+
+    <!-- Signatures -->
+    <div class="tab-pane fade" id="tab-signatures">
+        {% if signature_requests %}
+        <div class="list-group">
+            {% for sig in signature_requests %}
+            <div class="list-group-item">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-weight:500;font-size:13.5px">{{ sig.signer_name }}</div>
+                        <div style="font-size:12px;color:var(--text-tertiary)">{{ sig.signer_email }}</div>
+                    </div>
+                    {{ sig.status|status_badge }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card"><div class="empty-state"><div class="empty-state-text">No signature requests</div></div></div>
+        {% endif %}
+    </div>
+
+    <!-- Versions -->
+    <div class="tab-pane fade" id="tab-versions">
+        {% if versions %}
+        <div class="list-group">
+            {% for version in versions %}
+            <div class="list-group-item">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-weight:500;font-size:13.5px">Version {{ version.version_number }}</div>
+                        <div style="font-size:12px;color:var(--text-tertiary)">{{ version.changes_summary|default:"No summary" }}</div>
+                    </div>
+                    <span style="font-size:12px;color:var(--text-tertiary)">{{ version.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card"><div class="empty-state"><div class="empty-state-text">No version history</div></div></div>
+        {% endif %}
+    </div>
+
+    <!-- Comments -->
+    <div class="tab-pane fade" id="tab-comments">
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-body" style="padding:14px 20px">
+                <form method="post" action="{% url 'contracts:add_comment' pk=contract.pk %}" style="display:flex;gap:10px;align-items:flex-end">
+                    {% csrf_token %}
+                    <div style="flex:1">
+                        <textarea name="content" class="form-control" rows="2" placeholder="Add a comment..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm" style="height:36px">
+                        <i class="bi bi-send"></i> Send
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% for comment in comments %}
+        <div style="padding:12px 0;{% if not forloop.last %}border-bottom:1px solid var(--border-light){% endif %}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span style="font-weight:500;font-size:13px">{{ comment.author|default:"System" }}</span>
+                <span style="font-size:11px;color:var(--text-tertiary)">{{ comment.created_at|date:"M d, Y H:i" }}</span>
+            </div>
+            <p style="font-size:13.5px;color:var(--text-secondary);margin:0;line-height:1.5">{{ comment.content }}</p>
+            {% if comment.is_internal %}
+            <span style="font-size:11px;color:var(--warning)"><i class="bi bi-eye-slash"></i> Internal</span>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="empty-state"><div class="empty-state-text">No comments yet</div></div>
+        {% endfor %}
+    </div>
+</div>
+
+<div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-light)">
+    <a href="{% url 'contracts:delete' pk=contract.pk %}" class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)">
+        <i class="bi bi-trash3"></i> Delete Contract
+    </a>
+</div>
+{% endblock %}

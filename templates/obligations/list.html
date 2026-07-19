@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}All Obligations{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'obligations:dashboard' %}">Obligations</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>All</li>
+        </ul>
+        <h1>All Obligations</h1>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body-flush">
+        {% if obligations %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Contract</th>
+                        <th>Category</th>
+                        <th>Frequency</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                        <th>Assigned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obligation in obligations %}
+                    <tr>
+                        <td style="font-weight:500">{{ obligation.title }}</td>
+                        <td><a href="{% url 'contracts:detail' pk=obligation.contract.pk %}">{{ obligation.contract.title }}</a></td>
+                        <td style="color:var(--text-secondary)">{{ obligation.category|default:"--" }}</td>
+                        <td style="color:var(--text-secondary)">{{ obligation.get_frequency_display }}</td>
+                        <td>{{ obligation.status|status_badge }}</td>
+                        <td style="color:var(--text-secondary)">{{ obligation.due_date|default:"--" }}</td>
+                        <td style="color:var(--text-secondary)">{{ obligation.assigned_to|default:"--" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-calendar3"></i></div>
+            <div class="empty-state-text">No obligations found</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

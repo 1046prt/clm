@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Document{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:24px">
+        <div style="width:48px;height:48px;border-radius:50%;background:var(--success-light);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+            <i class="bi bi-pen" style="color:var(--success);font-size:20px"></i>
+        </div>
+        <h1 style="font-size:20px">Sign Document</h1>
+        <div class="page-header-sub">{{ sig_request.contract.title }}</div>
+    </div>
+
+    {% if sig_request.message %}
+    <div class="alert alert-info" style="margin-bottom:16px">
+        <i class="bi bi-info-circle"></i> {{ sig_request.message }}
+    </div>
+    {% endif %}
+
+    <div class="card" style="margin-bottom:16px">
+        <div class="card-body" style="max-height:240px;overflow-y:auto;white-space:pre-wrap;font-size:13px;line-height:1.7;color:var(--text-secondary)">
+            {{ sig_request.contract.content|truncatechars:2000 }}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" id="signForm">
+                {% csrf_token %}
+                <input type="hidden" name="signature_type" id="signatureType" value="typed">
+                <input type="hidden" name="signature_data" id="signatureData">
+
+                <div style="margin-bottom:16px">
+                    <div class="form-label">Signature Type</div>
+                    <div style="display:flex;gap:12px">
+                        <label class="form-check" style="cursor:pointer">
+                            <input class="form-check-input" type="radio" name="sig_type" value="typed" id="typeTyped" checked>
+                            <span class="form-check-label">Type Name</span>
+                        </label>
+                        <label class="form-check" style="cursor:pointer">
+                            <input class="form-check-input" type="radio" name="sig_type" value="drawn" id="typeDraw">
+                            <span class="form-check-label">Draw</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="typedSection" style="margin-bottom:16px">
+                    <input type="text" id="typedName" class="form-control text-center"
+                           placeholder="Type your full name"
+                           style="font-family:'Brush Script MT',cursive;font-size:28px;padding:16px"
+                           oninput="updateTypedSignature()">
+                </div>
+
+                <div id="drawSection" class="d-none" style="margin-bottom:16px">
+                    <canvas id="signatureCanvas" style="width:100%;height:160px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:crosshair;display:block"></canvas>
+                    <button type="button" class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="clearCanvas()">Clear</button>
+                </div>
+
+                <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:16px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm)">
+                    By signing, you agree this electronic signature has the same legal validity as a handwritten signature.
+                </div>
+
+                <button type="submit" class="btn btn-success btn-lg w-100" id="signBtn" disabled>
+                    <i class="bi bi-check-circle"></i> Sign Document
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const canvas=document.getElementById('signatureCanvas'),ctx=canvas.getContext('2d');
+let drawing=false,lastX,lastY;
+function resizeCanvas(){canvas.width=canvas.offsetWidth;canvas.height=160}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+canvas.addEventListener('mousedown',e=>{drawing=true;[lastX,lastY]=[e.offsetX,e.offsetY]});
+canvas.addEventListener('mousemove',e=>{if(!drawing)return;ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(e.offsetX,e.offsetY);ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2;ctx.lineCap='round';ctx.stroke();[lastX,lastY]=[e.offsetX,e.offsetY];updateDrawnSignature()});
+canvas.addEventListener('mouseup',()=>drawing=false);canvas.addEventListener('mouseout',()=>drawing=false);
+canvas.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0],r=canvas.getBoundingClientRect();drawing=true;[lastX,lastY]=[t.clientX-r.left,t.clientY-r.top]});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const t=e.touches[0],r=canvas.getBoundingClientRect();ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(t.clientX-r.left,t.clientY-r.top);ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2;ctx.lineCap='round';ctx.stroke();[lastX,lastY]=[t.clientX-r.left,t.clientY-r.top];updateDrawnSignature()});
+canvas.addEventListener('touchend',()=>drawing=false);
+function clearCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height);document.getElementById('signatureData').value='';document.getElementById('signBtn').disabled=true}
+function updateTypedSignature(){const n=document.getElementById('typedName').value.trim();if(n){document.getElementById('signatureData').value=n;document.getElementById('signatureType').value='typed';document.getElementById('signBtn').disabled=false}else{document.getElementById('signatureData').value='';document.getElementById('signBtn').disabled=true}}
+function updateDrawnSignature(){document.getElementById('signatureData').value=canvas.toDataURL();document.getElementById('signatureType').value='drawn';document.getElementById('signBtn').disabled=false}
+document.querySelectorAll('input[name="sig_type"]').forEach(r=>{r.addEventListener('change',e=>{if(e.target.value==='typed'){document.getElementById('typedSection').classList.remove('d-none');document.getElementById('drawSection').classList.add('d-none')}else{document.getElementById('typedSection').classList.add('d-none');document.getElementById('drawSection').classList.remove('d-none')}document.getElementById('signatureData').value='';document.getElementById('signBtn').disabled=true})});
+document.getElementById('signForm').addEventListener('submit',function(e){if(!document.getElementById('signatureData').value){e.preventDefault();alert('Please provide your signature.')}});
+</script>
+{% endblock %}

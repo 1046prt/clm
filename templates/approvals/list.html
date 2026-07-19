@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Approvals{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Approvals</h1>
+        <div class="page-header-sub">Review and manage contract approvals</div>
+    </div>
+</div>
+
+<ul class="nav-tabs-custom" style="margin-bottom:20px">
+    <li><a class="tab-link {% if active_tab == 'pending' %}active{% endif %}" href="?tab=pending">Pending for Me</a></li>
+    <li><a class="tab-link {% if active_tab == 'my_requests' %}active{% endif %}" href="?tab=my_requests">My Requests</a></li>
+    <li><a class="tab-link {% if active_tab == 'approved' %}active{% endif %}" href="?tab=approved">Approved</a></li>
+    <li><a class="tab-link {% if active_tab == 'rejected' %}active{% endif %}" href="?tab=rejected">Rejected</a></li>
+</ul>
+
+<div class="card">
+    <div class="card-body-flush">
+        {% if approvals %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Contract</th>
+                        <th>Chain</th>
+                        <th>Status</th>
+                        <th>Current Step</th>
+                        <th>Requested By</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for approval in approvals %}
+                    <tr>
+                        <td><a href="{% url 'contracts:detail' pk=approval.contract.pk %}" style="font-weight:500">{{ approval.contract.title }}</a></td>
+                        <td style="color:var(--text-secondary)">{{ approval.chain|default:"Manual" }}</td>
+                        <td>{{ approval.status|status_badge }}</td>
+                        <td style="color:var(--text-secondary)">{{ approval.current_step|default:"--" }}</td>
+                        <td style="color:var(--text-secondary)">{{ approval.requested_by }}</td>
+                        <td style="color:var(--text-secondary)">{{ approval.created_at|date:"M d, Y" }}</td>
+                        <td><a href="{% url 'approvals:detail' pk=approval.pk %}" class="btn btn-sm btn-ghost"><i class="bi bi-arrow-right"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-check-circle"></i></div>
+            <div class="empty-state-text">No approvals found</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

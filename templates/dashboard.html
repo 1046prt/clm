@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+{% load humanize %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <div class="page-header-sub">Overview of your contract portfolio</div>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'contracts:upload' %}" class="btn btn-secondary">
+            <i class="bi bi-upload"></i> Upload
+        </a>
+        <a href="{% url 'contracts:create' %}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> New Contract
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px">
+    <div class="stat-card">
+        <div>
+            <div class="stat-card-label">Total Contracts</div>
+            <div class="stat-card-value">{{ total_contracts }}</div>
+        </div>
+        <div class="stat-card-icon blue"><i class="bi bi-file-text"></i></div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-card-label">Active</div>
+            <div class="stat-card-value">{{ active_contracts }}</div>
+        </div>
+        <div class="stat-card-icon green"><i class="bi bi-check-circle"></i></div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-card-label">Pending Approval</div>
+            <div class="stat-card-value">{{ pending_approvals }}</div>
+        </div>
+        <div class="stat-card-icon amber"><i class="bi bi-clock"></i></div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-card-label">Expired</div>
+            <div class="stat-card-value">{{ expired_contracts }}</div>
+        </div>
+        <div class="stat-card-icon red"><i class="bi bi-exclamation-triangle"></i></div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-card-label">Active Value</div>
+            <div class="stat-card-value" style="font-size:22px">{{ total_value|currency }}</div>
+        </div>
+        <div class="stat-card-icon cyan"><i class="bi bi-cash"></i></div>
+    </div>
+</div>
+
+<!-- Main grid -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
+    <!-- Expiring Soon -->
+    <div class="card">
+        <div class="card-header">
+            <h5>Expiring Soon</h5>
+            <span class="badge badge-medium" style="font-size:11px">30 days</span>
+        </div>
+        <div class="card-body-flush">
+            {% if expiring_soon %}
+            <div class="list-group list-group-flush">
+                {% for contract in expiring_soon %}
+                <a href="{% url 'contracts:detail' pk=contract.pk %}" class="list-group-item list-group-item-action" style="padding:12px 20px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <div style="font-weight:500;font-size:13.5px">{{ contract.title }}</div>
+                            <div style="font-size:12px;color:var(--text-tertiary)">{{ contract.category|default:"No category" }}</div>
+                        </div>
+                        <div style="text-align:right">
+                            {% if contract.is_expiring_soon %}
+                            <span class="badge badge-medium">{{ contract.days_until_expiry }}d left</span>
+                            {% else %}
+                            <span class="badge badge-critical">Expired</span>
+                            {% endif %}
+                            <div style="font-size:11px;color:var(--text-tertiary);margin-top:3px">{{ contract.expiry_date }}</div>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon"><i class="bi bi-check-circle"></i></div>
+                <div class="empty-state-text">No contracts expiring soon</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Contracts -->
+    <div class="card">
+        <div class="card-header">
+            <h5>Recent Contracts</h5>
+            <a href="{% url 'contracts:list' %}" class="btn btn-sm btn-ghost">View all</a>
+        </div>
+        <div class="card-body-flush">
+            {% if recent_contracts %}
+            <div class="list-group list-group-flush">
+                {% for contract in recent_contracts %}
+                <a href="{% url 'contracts:detail' pk=contract.pk %}" class="list-group-item list-group-item-action" style="padding:12px 20px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <div style="font-weight:500;font-size:13.5px">{{ contract.title }}</div>
+                            <div style="font-size:12px;color:var(--text-tertiary)">{{ contract.category|default:"No category" }}</div>
+                        </div>
+                        {{ contract.status|status_badge }}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-text">No contracts yet</div>
+                <a href="{% url 'contracts:create' %}" class="btn btn-primary btn-sm">Create your first contract</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+        <div class="card-header"><h5>By Status</h5></div>
+        <div class="card-body">
+            <div class="chart-wrapper"><canvas id="statusChart"></canvas></div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h5>By Category</h5></div>
+        <div class="card-body">
+            <div class="chart-wrapper"><canvas id="categoryChart"></canvas></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const statusData = {{ status_distribution|safe }};
+const categoryData = {{ category_distribution|safe }};
+
+if (statusData.length > 0) {
+    new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: statusData.map(d => d.status ? d.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown'),
+            datasets: [{
+                data: statusData.map(d => d.count),
+                backgroundColor: ['#d1d5db','#fbbf24','#67e8f9','#60a5fa','#4ade80','#f87171','#374151','#d1d5db'],
+                borderWidth: 0,
+                spacing: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyleWidth: 8, font: { size: 11, family: 'Inter' } } } }
+        }
+    });
+}
+
+if (categoryData.length > 0) {
+    new Chart(document.getElementById('categoryChart'), {
+        type: 'bar',
+        data: {
+            labels: categoryData.map(d => d.category__name || 'Uncategorized'),
+            datasets: [{
+                data: categoryData.map(d => d.count),
+                backgroundColor: '#2563eb',
+                borderRadius: 4,
+                barThickness: 24,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' } } },
+                y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11, family: 'Inter' }, stepSize: 1 }, beginAtZero: true }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
