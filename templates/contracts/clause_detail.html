@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}{{ clause.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'contracts:clause_list' %}">Clauses</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>{{ clause.title }}</li>
+        </ul>
+        <h1>{{ clause.title }}</h1>
+        <div class="page-header-sub">
+            {% if clause.category %}{{ clause.category }}{% endif %}
+            {% if clause.tags %} | tags: {{ clause.tags }}{% endif %}
+        </div>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'contracts:clause_edit' pk=clause.pk %}" class="btn btn-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+        <a href="{% url 'contracts:clause_delete' pk=clause.pk %}" class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)"><i class="bi bi-trash3"></i></a>
+    </div>
+</div>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px">
+    <div><span class="form-label" style="font-size:12px">Risk</span><div style="font-weight:500">{{ clause.risk_level|severity_badge }}</div></div>
+    <div><span class="form-label" style="font-size:12px">Status</span><div style="font-weight:500">{% if clause.is_pre_approved %}<span class="badge badge-success">Pre-approved</span>{% else %}<span class="badge badge-draft">Draft</span>{% endif %}</div></div>
+    <div><span class="form-label" style="font-size:12px">Version</span><div style="font-weight:500">{{ clause.version }}</div></div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h5>Clause Text</h5></div>
+    <div class="card-body">
+        <div style="white-space:pre-wrap;line-height:1.7;color:var(--text-secondary);font-size:14px">{{ clause.content }}</div>
+    </div>
+</div>
+
+<div style="margin-top:12px;display:flex;gap:4px;flex-wrap:wrap">
+    <a href="{% url 'contracts:clause_edit' pk=clause.pk %}" class="btn btn-sm btn-primary">Edit</a>
+    <a href="{% url 'contracts:clause_list' %}" class="btn btn-sm btn-secondary">Back</a>
+</div>
+{% endblock %}

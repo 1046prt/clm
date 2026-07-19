@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Create contract from {{ template.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'contracts:template_list' %}">Templates</a></li>
+            <li><a href="{% url 'contracts:template_detail' pk=template.pk %}">{{ template.name }}</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>Create contract</li>
+        </ul>
+        <h1>Create contract from template</h1>
+        <div class="page-header-sub">You are about to create a new contract from the {{ template.name }} template.</div>
+    </div>
+</div>
+
+<div style="max-width:560px">
+    <div class="card">
+        <div class="card-body" style="text-align:center;padding:40px;">
+            <div style="font-size:48px;color:var(--primary);margin-bottom:16px;">
+                <i class="bi bi-file-earmark-plus"></i>
+            </div>
+            <h3 style="font-size:20px;margin-bottom:8px;">{{ template.name }}</h3>
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:24px;">
+                {{ template.description|default:"No description" }}
+            </p>
+
+            <ul style="text-align:left;margin:0 auto 24px;padding:0;list-style:none;display:inline-block">
+                {% if template.category %}<li style="padding:4px 0"><i class="bi bi-tag" style="margin-right:8px;color:var(--text-tertiary)"></i>Category: {{ template.category }}</li>{% endif %}
+                <li style="padding:4px 0"><i class="bi bi-layers" style="margin-right:8px;color:var(--text-tertiary)"></i>Clauses: {{ template.clauses.count }}</li>
+                <li style="padding:4px 0"><i class="bi bi-sort-numeric-up" style="margin-right:8px;color:var(--text-tertiary)"></i>Version: {{ template.version }}</li>
+            </ul>
+
+            <form method="post" action="{% url 'contracts:template_use' pk=template.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary" style="min-width:200px">
+                    <i class="bi bi-check"></i> Create from this template
+                </button>
+            </form>
+            <div style="margin-top:8px">
+                <a href="{% url 'contracts:template_detail' pk=template.pk %}" class="btn btn-secondary btn-sm">Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

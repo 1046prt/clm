@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.utils import timezone
 
 from .models import Obligation, RenewalAlert
+from .forms import ObligationForm
 from contracts.models import Contract
 
 
@@ -63,3 +64,53 @@ def dismiss_alert(request, pk):
         alert.save()
         messages.success(request, "Alert dismissed.")
     return redirect("obligations:dashboard")
+
+
+# ── Obligation CRUD ──────────────────────────
+
+@login_required
+def obligation_create(request):
+    if request.method == "POST":
+        form = ObligationForm(request.POST)
+        if form.is_valid():
+            obligation = form.save()
+            messages.success(request, f"Obligation '{obligation.title}' created.")
+            return redirect("obligations:list")
+    else:
+        form = ObligationForm()
+    return render(request, "obligations/obligation_form.html", {"form": form, "action": "Create"})
+
+
+@login_required
+def obligation_edit(request, pk):
+    obligation = get_object_or_404(Obligation, pk=pk)
+    if request.method == "POST":
+        form = ObligationForm(request.POST, instance=obligation)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Obligation '{obligation.title}' updated.")
+            return redirect("obligations:list")
+    else:
+        form = ObligationForm(instance=obligation)
+    return render(request, "obligations/obligation_form.html", {"form": form, "action": "Edit"})
+
+
+@login_required
+def obligation_complete(request, pk):
+    obligation = get_object_or_404(Obligation, pk=pk)
+    if request.method == "POST":
+        obligation.status = "completed"
+        obligation.save()
+        messages.success(request, f"Obligation '{obligation.title}' marked as completed.")
+    return redirect("obligations:list")
+
+
+@login_required
+def obligation_delete(request, pk):
+    obligation = get_object_or_404(Obligation, pk=pk)
+    if request.method == "POST":
+        title = obligation.title
+        obligation.delete()
+        messages.success(request, f"Obligation '{title}' deleted.")
+        return redirect("obligations:list")
+    return render(request, "contracts/confirm_delete.html", {"object": obligation, "object_type": "Obligation"})

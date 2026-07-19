@@ -3,11 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 
-from .models import ApprovalRequest, ApprovalAction
-from .forms import ApprovalActionForm, InitiateApprovalForm
+from .models import ApprovalChain, ApprovalRequest, ApprovalAction
+from .forms import ApprovalChainForm, ApprovalStepFormSet, ApprovalActionForm, InitiateApprovalForm
 from .engine import initiate_approval, process_approval
 from contracts.models import Contract
 
+
+# ── Approval Requests ────────────────────────
 
 @login_required
 def approval_list(request):
@@ -115,3 +117,69 @@ def process_approval_view(request, pk):
             return redirect("approvals:detail", pk=pk)
 
     return redirect("approvals:detail", pk=pk)
+
+
+# ── Approval Chain CRUD ──────────────────────
+
+@login_required
+def chain_list(request):
+    chains = ApprovalChain.objects.prefetch_related("steps").all()
+    return render(request, "approvals/chain_list.html", {"chains": chains})
+
+
+@login_required
+def chain_detail(request, pk):
+    chain = get_object_or_404(
+        ApprovalChain.objects.prefetch_related("steps__approver"),
+        pk=pk,
+    )
+    return render(request, "approvals/chain_detail.html", {"chain": chain})
+
+
+@login_required
+def chain_create(request):
+    if request.method == "POST":
+        form = ApprovalChainForm(request.POST)
+        formset = ApprovalStepFormSet(request.POST)
+        if form.is_valid() and formset.is_valid():
+            chain = form.save()
+            steps = formset.save(commit=False)
+            for step in steps:
+                step.chain = chain
+                step.save()
+            for step in formset.deleted_objects:
+                step.delete()
+            messages.success(request, f"Approval chain '{chain.name}' created.")
+            return redirect("approvals:chain_list")
+    else:
+        form = ApprovalChainForm()
+        formset = ApprovalStepFormSet(queryset=ApprovalStep.objects.none())
+    return render(request, "approvals/chain_form.html", {"form": form, "formset": formset, "action": "Create"})
+
+
+@login_required
+def chain_edit(request, pk):
+    chain = get_object_or_404(ApprovalChain, pk=pk)
+    if request.method == "POST":
+        form = ApprovalChainForm(request.POST, instance=chain)
+        formset = ApprovalStepFormSet(request.POST, instance=chain)
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            messages.success(request, f"Approval chain '{chain.name}' updated.")
+            return redirect("approvals:chain_list")
+    else:
+        form = ApprovalChainForm(instance=chain)
+        formset = ApprovalStepFormSet(instance=chain)
+    return render(request, "approvals/chain_form.html", {"form": form, "formset": formset, "action": "Edit"})
+
+
+@login_required
+def chain_delete(request, pk):
+    chain = get_object_or_404(ApprovalChain, pk=pk)
+    if request.method == "POST":
+        name = chain.name
+        chain.delete()
+        messages.success(request, f"Approval chain '{name}' deleted.")
+        return redirect("approvals:chain_list")
+    return render(request, "contracts/confirm_delete.html", {"object": chain, "object_type": "Approval Chain"})

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Clauses{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Clauses</h1>
+        <div class="page-header-sub">{{ clauses|length }} clause{{ clauses|length|pluralize }}</div>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'contracts:clause_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> New Clause
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body-flush">
+        {% if clauses %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Risk</th>
+                        <th>Status</th>
+                        <th>Tags</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for clause in clauses %}
+                    <tr>
+                        <td style="font-weight:600"><a href="{% url 'contracts:clause_detail' pk=clause.pk %}">{{ clause.title }}</a></td>
+                        <td>{{ clause.category|default:"--" }}</td>
+                        <td>{{ clause.risk_level|severity_badge }}</td>
+                        <td>{% if clause.is_pre_approved %}<span class="badge badge-success">Approved</span>{% else %}<span class="badge badge-draft">Draft</span>{% endif %}</td>
+                        <td style="color:var(--text-secondary)">{{ clause.tags|default:"--" }}</td>
+                        <td>
+                            <a href="{% url 'contracts:clause_edit' pk=clause.pk %}" class="btn btn-sm btn-ghost"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'contracts:clause_delete' pk=clause.pk %}" class="btn btn-sm btn-ghost" style="color:var(--danger)"><i class="bi bi-trash3"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-pencil-square"></i></div>
+            <div class="empty-state-text">No clauses yet</div>
+            <a href="{% url 'contracts:clause_create' %}" class="btn btn-primary btn-sm">Create your first clause</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

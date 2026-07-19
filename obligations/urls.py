@@ -6,5 +6,9 @@ app_name = "obligations"
 urlpatterns = [
     path("", views.obligation_dashboard, name="dashboard"),
     path("list/", views.obligation_list, name="list"),
-    path("alert/<uuid:pk>/dismiss/", views.dismiss_alert, name="dismiss_alert"),
+    path("create/", views.obligation_create, name="create"),
+    path("<uuid:pk>/edit/", views.obligation_edit, name="edit"),
+    path("<uuid:pk>/complete/", views.obligation_complete, name="complete"),
+    path("<uuid:pk>/delete/", views.obligation_delete, name="delete"),
+    path("dismiss-alert/<uuid:pk>/", views.dismiss_alert, name="dismiss_alert"),
 ]

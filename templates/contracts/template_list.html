@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Contract Templates{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Templates</h1>
+        <div class="page-header-sub">{{ templates|length }} template{{ templates|length|pluralize }}</div>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'contracts:template_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> New Template
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body-flush">
+        {% if templates %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Active</th>
+                        <th>Clauses</th>
+                        <th>Version</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for template in templates %}
+                    <tr>
+                        <td style="font-weight:600"><a href="{% url 'contracts:template_detail' pk=template.pk %}">{{ template.name }}</a></td>
+                        <td>{{ template.category|default:"--" }}</td>
+                        <td>{% if template.is_active %}<span class="badge badge-active">Active</span>{% else %}<span class="badge badge-draft">Inactive</span>{% endif %}</td>
+                        <td>{{ template.clauses.count }}</td>
+                        <td>{{ template.version }}</td>
+                        <td>{{ template.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'contracts:template_edit' pk=template.pk %}" class="btn btn-sm btn-ghost"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'contracts:template_delete' pk=template.pk %}" class="btn btn-sm btn-ghost" style="color:var(--danger)"><i class="bi bi-trash3"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-files"></i></div>
+            <div class="empty-state-text">No templates yet</div>
+            <a href="{% url 'contracts:template_create' %}" class="btn btn-primary btn-sm">Create your first template</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

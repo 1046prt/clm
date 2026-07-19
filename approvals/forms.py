@@ -1,5 +1,24 @@
 from django import forms
-from .models import ApprovalChain, ApprovalRequest
+from .models import ApprovalChain, ApprovalStep, ApprovalRequest
+from contracts.models import ContractCategory
+
+
+class ApprovalChainForm(forms.ModelForm):
+    class Meta:
+        model = ApprovalChain
+        fields = ["name", "description", "contract_category", "min_value", "max_value", "is_active"]
+
+
+class ApprovalStepForm(forms.ModelForm):
+    class Meta:
+        model = ApprovalStep
+        fields = ["step_number", "name", "approver", "role_required", "can_reject", "can_comment", "is_optional"]
+
+
+ApprovalStepFormSet = forms.inlineformset_factory(
+    ApprovalChain, ApprovalStep, form=ApprovalStepForm,
+    extra=1, can_delete=True, min_num=1,
+)
 
 
 class ApprovalActionForm(forms.Form):

@@ -34,9 +34,23 @@
                     <i class="bi bi-file-text"></i> Contracts
                 </a>
 
+                <div class="sidebar-section">Master Data</div>
+                <a href="{% url 'contracts:party_list' %}" class="sidebar-link {% if 'parties' in request.path %}active{% endif %}">
+                    <i class="bi bi-people"></i> Parties
+                </a>
+                <a href="{% url 'contracts:clause_list' %}" class="sidebar-link {% if 'clauses' in request.path %}active{% endif %}">
+                    <i class="bi bi-pencil-square"></i> Clauses
+                </a>
+                <a href="{% url 'contracts:template_list' %}" class="sidebar-link {% if 'templates' in request.path %}active{% endif %}">
+                    <i class="bi bi-files"></i> Templates
+                </a>
+
                 <div class="sidebar-section">Workflow</div>
-                <a href="{% url 'approvals:list' %}" class="sidebar-link {% if 'approvals' in request.path %}active{% endif %}">
+                <a href="{% url 'approvals:list' %}" class="sidebar-link {% if 'approvals' in request.path and 'chains' not in request.path %}active{% endif %}">
                     <i class="bi bi-check-circle"></i> Approvals
+                </a>
+                <a href="{% url 'approvals:chain_list' %}" class="sidebar-link {% if 'chains' in request.path %}active{% endif %}">
+                    <i class="bi bi-diagram-3"></i> Approval Chains
                 </a>
                 <a href="{% url 'obligations:dashboard' %}" class="sidebar-link {% if 'obligations' in request.path %}active{% endif %}">
                     <i class="bi bi-calendar3"></i> Obligations
@@ -59,7 +73,7 @@
         <main class="main">
             {% if messages %}
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade-in" role="alert">
+            <div class="alert{% if message.tags == 'error' %} alert-danger{% else %} alert-{{ message.tags }}{% endif %} alert-dismissible fade-in" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
             </div>

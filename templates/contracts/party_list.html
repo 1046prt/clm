@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Parties{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Parties</h1>
+        <div class="page-header-sub">{{ parties|length }} part{{ parties|length|pluralize:"y,ies" }}</div>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'contracts:party_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> New Party
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body-flush">
+        {% if parties %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Contact</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for party in parties %}
+                    <tr>
+                        <td style="font-weight:600">{{ party.name }}</td>
+                        <td>{{ party.get_party_type_display }}</td>
+                        <td>{{ party.email|default:"--" }}</td>
+                        <td>{{ party.phone|default:"--" }}</td>
+                        <td>{{ party.contact_person|default:"--" }}</td>
+                        <td>
+                            <a href="{% url 'contracts:party_edit' pk=party.pk %}" class="btn btn-sm btn-ghost"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'contracts:party_delete' pk=party.pk %}" class="btn btn-sm btn-ghost" style="color:var(--danger)"><i class="bi bi-trash3"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-people"></i></div>
+            <div class="empty-state-text">No parties found</div>
+            <a href="{% url 'contracts:party_create' %}" class="btn btn-primary btn-sm">Add a party</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

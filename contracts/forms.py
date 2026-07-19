@@ -1,5 +1,8 @@
 from django import forms
-from .models import Contract, Party, ContractCategory, ContractTemplate, Clause, ContractComment
+from .models import (
+    Contract, Party, ContractCategory, ContractTemplate, Clause,
+    ClauseCategory, ContractComment, ContractVersion
+)
 
 
 class ContractForm(forms.ModelForm):
@@ -66,3 +69,35 @@ class ContractCommentForm(forms.ModelForm):
         widgets = {
             "content": forms.Textarea(attrs={"rows": 3, "placeholder": "Add a comment..."}),
         }
+
+
+# ── Party CRUD ───────────────────────────────
+
+class PartyForm(forms.ModelForm):
+    class Meta:
+        model = Party
+        fields = ["name", "party_type", "email", "phone", "address", "tax_id", "contact_person"]
+
+
+# ── Clause CRUD ──────────────────────────────
+
+class ClauseForm(forms.ModelForm):
+    class Meta:
+        model = Clause
+        fields = ["title", "category", "content", "risk_level", "is_pre_approved", "tags"]
+        widgets = {"content": forms.Textarea(attrs={"rows": 6})}
+
+
+# ── ContractTemplate CRUD ────────────────────
+
+class ContractTemplateForm(forms.ModelForm):
+    clauses = forms.ModelMultipleChoiceField(
+        queryset=Clause.objects.filter(is_pre_approved=True),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
+
+    class Meta:
+        model = ContractTemplate
+        fields = ["name", "category", "description", "content", "is_active", "clauses"]
+        widgets = {"content": forms.Textarea(attrs={"rows": 10})}

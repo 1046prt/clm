@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}{{ chain.name }} - Approval Chain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <ul class="breadcrumb">
+            <li><a href="{% url 'approvals:chain_list' %}">Approval Chains</a></li>
+            <li><span class="breadcrumb-sep">/</span></li>
+            <li>{{ chain.name }}</li>
+        </ul>
+        <h1>{{ chain.name }}</h1>
+        <div class="page-header-sub">{{ chain.description|default:"No description" }}</div>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'approvals:chain_edit' pk=chain.pk %}" class="btn btn-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+        <a href="{% url 'approvals:chain_delete' pk=chain.pk %}" class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)"><i class="bi bi-trash3"></i></a>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--border-light);border:1px solid var(--border-light);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
+    <div class="meta-item"><div class="meta-item-label">Category</div><div class="meta-item-value">{{ chain.contract_category|default:"All" }}</div></div>
+    <div class="meta-item"><div class="meta-item-label">Active</div><div class="meta-item-value">{% if chain.is_active %}<span class="badge badge-success">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}</div></div>
+    <div class="meta-item"><div class="meta-item-label">Value range</div><div class="meta-item-value">{% if chain.min_value %}${{ chain.min_value }}{% else %}$0{% endif %} - {% if chain.max_value %}${{ chain.max_value }}{% else %}$∞{% endif %}</div></div>
+    <div class="meta-item"><div class="meta-item-label">Steps</div><div class="meta-item-value">{{ chain.steps.count }}</div></div>
+</div>
+
+{% if steps %}
+<div class="card">
+    <div class="card-header"><h5>Steps</h5></div>
+    <div class="card-body-flush">
+        {% for step in steps %}
+        <div style="padding:12px 24px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:16px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">
+                {{ step.step_number }}
+            </div>
+            <div style="flex:1">
+                <div style="font-weight:500;font-size:13.5px">{{ step.name }}</div>
+                <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px">
+                    Approver: {{ step.approver.get_full_name|default:step.approver.username }}
+                    {% if step.role_required %} | Role: {{ step.role_required }}{% endif %}
+                </div>
+            </div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+                {% if step.is_optional %}<span class="badge badge-active">Optional</span>{% endif %}
+                {% if step.can_reject %}<span class="badge badge-critical">Can Reject</span>{% endif %}
+                {% if not step.can_reject %}<span class="badge badge-draft">No reject</span>{% endif %}
+                {% if step.can_comment %}<span class="badge badge-medium">comments</span>{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div style="margin-top:12px">
+    <a href="{% url 'approvals:chain_list' %}" class="btn btn-sm btn-secondary">Back</a>
+</div>
+{% endblock %}

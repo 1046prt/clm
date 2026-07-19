@@ -1,6 +1,9 @@
 {% extends "base.html" %}
+{% with obj=object|default:contract %}
+{% with obj_name=obj.title|default:obj.name %}
+{% with obj_type=object_type|default:"Contract" %}
 
-{% block title %}Delete Contract{% endblock %}
+{% block title %}Delete {{ obj_type }}{% endblock %}
 
 {% block content %}
 <div style="max-width:480px;margin-top:40px">
@@ -9,18 +12,22 @@
             <div style="width:48px;height:48px;border-radius:50%;background:var(--danger-light);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">
                 <i class="bi bi-exclamation-triangle" style="color:var(--danger);font-size:20px"></i>
             </div>
-            <h2 style="font-size:18px;margin-bottom:8px">Delete Contract</h2>
+            <h2 style="font-size:18px;margin-bottom:8px">Delete {{ obj_type }}</h2>
             <p style="color:var(--text-secondary);font-size:14px;margin-bottom:24px">
-                Are you sure you want to delete <strong>{{ contract.title }}</strong>? This action cannot be undone.
+                Are you sure you want to delete <strong>{{ obj_name }}</strong>? This action cannot be undone.
             </p>
             <form method="post" style="display:flex;gap:8px;justify-content:center">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">
                     <i class="bi bi-trash3"></i> Yes, Delete
                 </button>
-                <a href="{% url 'contracts:detail' pk=contract.pk %}" class="btn btn-secondary">Cancel</a>
+                <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
             </form>
         </div>
     </div>
 </div>
 {% endblock %}
+
+{% endwith %}
+{% endwith %}
+{% endwith %}
