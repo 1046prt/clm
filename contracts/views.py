@@ -1,10 +1,13 @@
 import json
+import uuid
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout as auth_logout
 from django.contrib import messages
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 
 from .models import Contract, Party, ContractCategory, ContractComment, ContractVersion, Clause, ContractTemplate
 from .forms import (
@@ -13,6 +16,10 @@ from .forms import (
 )
 from ai_analysis.extractor import analyze_contract, extract_text_from_file
 from ai_analysis.risk_detector import detect_risks
+
+
+def _generate_contract_number():
+    return f"CNT-{uuid.uuid4().hex[:8].upper()}"
 
 
 @login_required
@@ -79,8 +86,13 @@ def contract_list(request):
         if priority:
             contracts = contracts.filter(priority=priority)
 
+    paginator = Paginator(contracts, 25)
+    page = request.GET.get("page")
+    contracts_page = paginator.get_page(page)
+
     context = {
-        "contracts": contracts,
+        "contracts": contracts_page,
+        "page_obj": contracts_page,
         "search_form": form,
     }
     return render(request, "contracts/list.html", context)
@@ -127,6 +139,7 @@ def contract_create(request):
             contract = form.save(commit=False)
             contract.created_by = request.user
             contract.internal_owner = request.user
+            contract.contract_number = _generate_contract_number()
             contract.save()
             form.save_m2m()
             messages.success(request, f"Contract '{contract.title}' created successfully.")
@@ -146,10 +159,12 @@ def contract_edit(request, pk):
             contract = form.save()
 
             try:
-                v = float(contract.version) + 0.1
+                v = round(float(contract.version), 1) + 0.1
                 new_ver = f"{v:.1f}"
             except (ValueError, TypeError):
                 new_ver = contract.version
+            contract.version = new_ver
+            contract.save(update_fields=["version"])
 
             ContractVersion.objects.create(
                 contract=contract,
@@ -177,6 +192,7 @@ def contract_upload(request):
                 title=form.cleaned_data["title"],
                 description=form.cleaned_data.get("description", ""),
                 category=form.cleaned_data.get("category"),
+                contract_number=_generate_contract_number(),
                 uploaded_file=uploaded_file,
                 created_by=request.user,
                 internal_owner=request.user,
@@ -218,7 +234,7 @@ def contract_delete(request, pk):
         contract.delete()
         messages.success(request, f"Contract '{title}' deleted.")
         return redirect("contracts:list")
-    return render(request, "contracts/confirm_delete.html", {"contract": contract})
+    return render(request, "contracts/confirm_delete.html", {"object": contract, "object_type": "Contract"})
 
 
 @login_required
@@ -238,8 +254,18 @@ def run_analysis(request, pk):
 
 @login_required
 def party_list(request):
-    parties = Party.objects.all()
-    return render(request, "contracts/party_list.html", {"parties": parties})
+    parties = Paginator(Party.objects.all(), 25).get_page(request.GET.get("page"))
+    return render(request, "contracts/party_list.html", {"parties": parties, "page_obj": parties})
+
+
+@login_required
+def party_detail(request, pk):
+    party = get_object_or_404(Party, pk=pk)
+    contract_count = party.contracts.count()
+    return render(request, "contracts/party_detail.html", {
+        "party": party,
+        "contract_count": contract_count,
+    })
 
 
 @login_required
@@ -284,8 +310,8 @@ def party_delete(request, pk):
 
 @login_required
 def clause_list(request):
-    clauses = Clause.objects.select_related("category").all()
-    return render(request, "contracts/clause_list.html", {"clauses": clauses})
+    clauses = Paginator(Clause.objects.select_related("category").all(), 25).get_page(request.GET.get("page"))
+    return render(request, "contracts/clause_list.html", {"clauses": clauses, "page_obj": clauses})
 
 
 @login_required
@@ -336,8 +362,8 @@ def clause_delete(request, pk):
 
 @login_required
 def template_list(request):
-    templates = ContractTemplate.objects.select_related("category").all()
-    return render(request, "contracts/template_list.html", {"templates": templates})
+    templates = Paginator(ContractTemplate.objects.select_related("category").all(), 25).get_page(request.GET.get("page"))
+    return render(request, "contracts/template_list.html", {"templates": templates, "page_obj": templates})
 
 
 @login_required
@@ -402,7 +428,6 @@ def template_use(request, pk):
             internal_owner=request.user,
             status="draft",
         )
-        contract.parties.set(template.clauses.all())
         messages.success(request, f"Contract created from template '{template.name}'.")
         return redirect("contracts:detail", pk=contract.pk)
     return render(request, "contracts/template_use.html", {"template": template})

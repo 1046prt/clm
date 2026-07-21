@@ -14,6 +14,7 @@ urlpatterns = [
     path("<uuid:pk>/comment/", views.contract_add_comment, name="add_comment"),
     path("<uuid:pk>/analyze/", views.run_analysis, name="run_analysis"),
     path("parties/", views.party_list, name="party_list"),
+    path("parties/<uuid:pk>/", views.party_detail, name="party_detail"),
     path("parties/create/", views.party_create, name="party_create"),
     path("parties/<uuid:pk>/edit/", views.party_edit, name="party_edit"),
     path("parties/<uuid:pk>/delete/", views.party_delete, name="party_delete"),

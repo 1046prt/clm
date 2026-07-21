@@ -26,7 +26,7 @@
                         </label>
                         {{ field }}
                         {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                        {% if field.errors %}<div style="color:var(--error);font-size:12px;margin-top:3px">{% for error in field.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        {% if field.errors %}<div style="color:var(--danger);font-size:12px;margin-top:3px">{% for error in field.errors %}{{ error }}{% endfor %}</div>{% endif %}
                 </div>
                 {% endfor %}
 

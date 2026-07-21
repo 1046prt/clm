@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load contract_extras %}
+
+{% block title %}Signature Requests</title>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Signature Requests</h1>
+        <div class="page-header-sub">{{ requests|length }} request{{ requests|pluralize }}</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body-flush">
+        {% if requests %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Contract</th>
+                        <th>Signer</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sr in requests %}
+                    <tr>
+                        <td><a href="{% url 'contracts:detail' pk=sr.contract.pk %}" style="font-weight:500">{{ sr.contract.title }}</a></td>
+                        <td>{{ sr.signer_name }}</td>
+                        <td>{{ sr.signer_email }}</td>
+                        <td>{{ sr.status|status_badge }}</td>
+                        <td>{{ sr.created_at|date:"M d, Y" }}</td>
+                        <td><a href="{% url 'esign:audit_log' contract_pk=sr.contract.pk %}" class="btn btn-sm btn-ghost"><i class="bi bi-journal-text"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-pen"></i></div>
+            <div class="empty-state-text">No signature requests</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if requests.has_other_pages %}
+    <div class="card-body pagination-nav" style="border-top:1px solid var(--border-light);padding:10px 20px">
+        {% if requests.has_previous %}
+        <a href="?page={{ requests.previous_page_number }}" class="btn btn-sm btn-secondary">Previous</a>
+        {% endif %}
+        <span style="color:var(--text-secondary);font-size:12px;margin:0 12px">Page {{ requests.number }} of {{ requests.paginator.num_pages }}</span>
+        {% if requests.has_next %}
+        <a href="?page={{ requests.next_page_number }}" class="btn btn-sm btn-secondary">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

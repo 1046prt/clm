@@ -2,9 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from django.core.paginator import Paginator
 
 from .models import Obligation, RenewalAlert
-from .forms import ObligationForm
+from .forms import ObligationForm, ObligationCreateForm
 from contracts.models import Contract
 
 
@@ -50,10 +51,11 @@ def obligation_dashboard(request):
 
 @login_required
 def obligation_list(request):
-    obligations = Obligation.objects.select_related(
-        "contract", "assigned_to", "responsible_party", "category"
-    ).order_by("due_date")
-    return render(request, "obligations/list.html", {"obligations": obligations})
+    obligations = Paginator(
+        Obligation.objects.select_related("contract", "assigned_to", "responsible_party", "category").order_by("due_date"),
+        50
+    ).get_page(request.GET.get("page"))
+    return render(request, "obligations/list.html", {"obligations": obligations, "page_obj": obligations})
 
 
 @login_required
@@ -71,13 +73,13 @@ def dismiss_alert(request, pk):
 @login_required
 def obligation_create(request):
     if request.method == "POST":
-        form = ObligationForm(request.POST)
+        form = ObligationCreateForm(request.POST)
         if form.is_valid():
             obligation = form.save()
             messages.success(request, f"Obligation '{obligation.title}' created.")
             return redirect("obligations:list")
     else:
-        form = ObligationForm()
+        form = ObligationCreateForm()
     return render(request, "obligations/obligation_form.html", {"form": form, "action": "Create"})
 
 
@@ -100,6 +102,7 @@ def obligation_complete(request, pk):
     obligation = get_object_or_404(Obligation, pk=pk)
     if request.method == "POST":
         obligation.status = "completed"
+        obligation.completed_date = timezone.now().date()
         obligation.save()
         messages.success(request, f"Obligation '{obligation.title}' marked as completed.")
     return redirect("obligations:list")

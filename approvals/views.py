@@ -2,8 +2,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from django.core.paginator import Paginator
 
-from .models import ApprovalChain, ApprovalRequest, ApprovalAction
+from .models import ApprovalChain, ApprovalStep, ApprovalRequest, ApprovalAction
 from .forms import ApprovalChainForm, ApprovalStepFormSet, ApprovalActionForm, InitiateApprovalForm
 from .engine import initiate_approval, process_approval
 from contracts.models import Contract
@@ -32,8 +33,12 @@ def approval_list(request):
     else:
         approvals = ApprovalRequest.objects.all().select_related("contract", "chain")
 
+    paginator = Paginator(approvals, 25)
+    approvals_page = paginator.get_page(request.GET.get("page"))
+
     context = {
-        "approvals": approvals,
+        "approvals": approvals_page,
+        "page_obj": approvals_page,
         "active_tab": tab,
     }
     return render(request, "approvals/list.html", context)
@@ -123,8 +128,9 @@ def process_approval_view(request, pk):
 
 @login_required
 def chain_list(request):
-    chains = ApprovalChain.objects.prefetch_related("steps").all()
-    return render(request, "approvals/chain_list.html", {"chains": chains})
+    chains = Paginator(ApprovalChain.objects.prefetch_related("steps").all(), 25).get_page(request.GET.get("page"))
+
+    return render(request, "approvals/chain_list.html", {"chains": chains, "page_obj": chains})
 
 
 @login_required

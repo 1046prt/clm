@@ -3,10 +3,20 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 import hashlib
 
 from .models import SignatureRequest, Signature, SigningAuditLog
 from contracts.models import Contract
+
+
+@login_required
+def signature_request_list(request):
+    requests = Paginator(
+        SignatureRequest.objects.select_related("contract").all(),
+        25
+    ).get_page(request.GET.get("page"))
+    return render(request, "esignatures/list.html", {"requests": requests})
 
 
 @login_required

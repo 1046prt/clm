@@ -84,7 +84,7 @@ class PartyForm(forms.ModelForm):
 class ClauseForm(forms.ModelForm):
     class Meta:
         model = Clause
-        fields = ["title", "category", "content", "risk_level", "is_pre_approved", "tags"]
+        fields = ["title", "category", "content", "risk_level", "is_pre_approved", "version", "tags"]
         widgets = {"content": forms.Textarea(attrs={"rows": 6})}
 
 
@@ -99,5 +99,5 @@ class ContractTemplateForm(forms.ModelForm):
 
     class Meta:
         model = ContractTemplate
-        fields = ["name", "category", "description", "content", "is_active", "clauses"]
+        fields = ["name", "category", "description", "content", "is_active", "version", "clauses"]
         widgets = {"content": forms.Textarea(attrs={"rows": 10})}

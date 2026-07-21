@@ -55,6 +55,9 @@
                 <a href="{% url 'obligations:dashboard' %}" class="sidebar-link {% if 'obligations' in request.path %}active{% endif %}">
                     <i class="bi bi-calendar3"></i> Obligations
                 </a>
+                <a href="{% url 'esign:list' %}" class="sidebar-link {% if 'esign' in request.path %}active{% endif %}">
+                    <i class="bi bi-pen"></i> Signatures
+                </a>
             </nav>
 
             <div class="sidebar-footer">
@@ -66,6 +69,12 @@
                         <div class="sidebar-user-role">{{ user.email|default:"User" }}</div>
                     </div>
                 </div>
+                <form method="post" action="{% url 'logout' %}" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-ghost" style="width:100%;justify-content:center;color:var(--text-tertiary);font-size:12px">
+                        <i class="bi bi-box-arrow-left"></i> Logout
+                    </button>
+                </form>
                 {% endif %}
             </div>
         </aside>

@@ -60,8 +60,12 @@ class Signature(models.Model):
         return f"Signature by {self.request.signer_name} at {self.signed_at}"
 
     def save(self, *args, **kwargs):
+        is_new = self._state.adding
         if not self.signature_hash:
-            hash_input = f"{self.request.id}{self.signature_data}{self.signed_at}"
+            from django.utils import timezone
+            if is_new:
+                self.signed_at = timezone.now()
+            hash_input = f"{self.request.id}{self.signature_data}{self.signed_at.isoformat()}"
             self.signature_hash = hashlib.sha256(hash_input.encode()).hexdigest()
         super().save(*args, **kwargs)
 

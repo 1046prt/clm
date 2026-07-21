@@ -38,5 +38,5 @@ def url_replace(request, field, value):
 @register.filter
 def currency(value):
     if value:
-        return f"${value:,.0f}"
+        return f"${value:,.2f}"
     return "--"
